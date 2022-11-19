@@ -23,7 +23,7 @@ window_create(uint32_t width, uint32_t height)
     
     g_window = SDL_CreateWindow("Image Loader",
                                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                                width, height, SDL_WINDOW_SHOWN);
+                                width, height, 0);
     
     if (g_window == NULL) {
         fprintf(stderr, "[ERROR] Could not create window: %s\n", SDL_GetError());
@@ -41,7 +41,7 @@ draw_image(SDL_Surface* screen_surface, uint32_t* pixels,
         SDL_CreateRGBSurfaceFrom(pixels,
                                  width, height, 32, 4 * width,
                                  0xFF << 24, 0xFF << 16, 0xFF << 8, 0xFF << 0);
-    SDL_BlitSurface(img_surface, &img_surface->clip_rect,
+    SDL_BlitScaled(img_surface, &img_surface->clip_rect,
                     screen_surface, &screen_surface->clip_rect);
 }
 
@@ -85,16 +85,27 @@ draw_transparency_background(SDL_Surface* screen_surface)
 bool
 window_update(uint32_t* pixels, uint32_t width, uint32_t height)
 {
+    SDL_Surface* screen_surface = SDL_GetWindowSurface(g_window);
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
             case SDL_QUIT: {
                 return false;
             } break;
+            case SDL_WINDOWEVENT: {
+                switch (e.window.event) {
+                    case SDL_WINDOWEVENT_RESIZED: {
+                        float aspect_ratio = width / (float)height;
+                        uint32_t h = screen_surface->h;
+                        uint32_t w = h * aspect_ratio;
+                        SDL_SetWindowSize(g_window, w, h);
+                        screen_surface = SDL_GetWindowSurface(g_window);
+                    } break;
+                }
+            } break;
         }
     }
-    
-    SDL_Surface* screen_surface = SDL_GetWindowSurface(g_window);
+ 
     draw_transparency_background(screen_surface);
     draw_image(screen_surface, pixels, width, height);
     SDL_UpdateWindowSurface(g_window);
