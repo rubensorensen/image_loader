@@ -83,7 +83,7 @@ read_tga_header(uint8_t* data, TgaHeader* header)
     return data;
 }
 
-/*static*/ void
+static void
 print_tga_header(TgaHeader header)
 {    
     printf("TGA HEADER:\n");

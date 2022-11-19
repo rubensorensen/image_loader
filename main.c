@@ -7,9 +7,17 @@
 #include <errno.h>
 
 int
-main(void)
-{    
-    Image img = read_image_from_file("test_images/football_seal.tga");
+main(int argc, char** argv)
+{
+    if (argc != 2) {
+        fprintf(stderr,
+                "incorrect amount of arguments given. Expects exactly 1 argument");
+        fprintf(stderr, "Usage: image_loader filepath");
+        exit(EXIT_FAILURE);
+    }
+    
+    const char* filepath = argv[1];
+    Image img = read_image_from_file(filepath);
     
     if (!window_create(img.width, img.height)) {
         exit(EXIT_FAILURE);
