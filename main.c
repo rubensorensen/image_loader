@@ -11,8 +11,8 @@ main(int argc, char** argv)
 {
     if (argc != 2) {
         fprintf(stderr,
-                "incorrect amount of arguments given. Expects exactly 1 argument");
-        fprintf(stderr, "Usage: image_loader filepath");
+                "[ERROR] Incorrect amount of arguments given. Expects exactly 1 argument\n");
+        fprintf(stderr, "Usage: image_loader filepath\n");
         exit(EXIT_FAILURE);
     }
     

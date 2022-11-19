@@ -8,7 +8,7 @@ static bool
 sdl_init(void)
 {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        fprintf(stderr, "could not initialize sdl2: %s\n", SDL_GetError());
+        fprintf(stderr, "[ERROR] Could not initialize sdl2: %s\n", SDL_GetError());
         return false;
     }
     return true;
@@ -26,7 +26,7 @@ window_create(uint32_t width, uint32_t height)
                                 width, height, SDL_WINDOW_SHOWN);
     
     if (g_window == NULL) {
-        fprintf(stderr, "could not create window: %s\n", SDL_GetError());
+        fprintf(stderr, "[ERROR] Could not create window: %s\n", SDL_GetError());
         return false;
     }
     

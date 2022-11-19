@@ -27,7 +27,7 @@ slurp_file(const char* filename, uint32_t* bytes_read)
 {
     FILE* f = fopen(filename, "rb");
     if (!f) {
-        fprintf(stderr, "Could not open file %s: %s\n", filename, strerror(errno));
+        fprintf(stderr, "[ERROR] Could not open file %s: %s\n", filename, strerror(errno));
         exit(EXIT_FAILURE);
     }
     
@@ -37,12 +37,12 @@ slurp_file(const char* filename, uint32_t* bytes_read)
 
     uint8_t* data = (uint8_t*)malloc(file_size * sizeof(uint8_t));
     if (!data) {
-        fprintf(stderr, "Could not allocate %u bytes: %s\n", file_size, strerror(errno));
+        fprintf(stderr, "[ERROR] Could not allocate %u bytes: %s\n", file_size, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     if (fread(data, 1, file_size, f) != file_size) {
-        fprintf(stderr, "Could not read entire file for some reason\n");
+        fprintf(stderr, "[ERROR] Could not read entire file for some reason\n");
         exit(EXIT_FAILURE);
     }
 
@@ -239,7 +239,7 @@ void
 write_image_to_ppm(Image image, const char* filename) {
     FILE* f = fopen(filename, "w");
     if (!f) {
-        fprintf(stderr, "Could not open file %s for writing: %s\n", filename, strerror(errno));
+        fprintf(stderr, "[ERROR] Could not open file %s for writing: %s\n", filename, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
