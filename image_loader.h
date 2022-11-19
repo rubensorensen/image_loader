@@ -11,7 +11,6 @@ typedef enum _FileFormat {
 typedef enum _TgaColorMapType {
     TGA_COLOR_MAP_TYPE_NO_COLOR_MAP = 0,
     TGA_COLOR_MAP_TYPE_COLOR_MAP = 1,
-    TGA_COLOR_MAP_TYPE_COUNT
 } TgaColorMapType;
 
 typedef enum _TgaImageType {
@@ -21,7 +20,7 @@ typedef enum _TgaImageType {
     TGA_IMAGE_TYPE_UNCOMPRESSED_BLACK_AND_WHITE_IMAGE = 3,
     TGA_IMAGE_TYPE_RUN_LENGTH_ENCODED_COLOR_MAPPED_IMAGE = 9,
     TGA_IMAGE_TYPE_RUN_LENGTH_ENCODED_TRUE_COLOR_IMAGE = 10,
-    TGA_IMAGE_TYPE_RUN_LENGTH_ENCODED_BLACK_AND_WHITE_IMAGE = 11
+    TGA_IMAGE_TYPE_RUN_LENGTH_ENCODED_BLACK_AND_WHITE_IMAGE = 11,
 } TgaImageType;
 
 typedef struct _TgaColorMapSpecification {
