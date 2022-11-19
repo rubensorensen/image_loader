@@ -50,12 +50,12 @@ draw_transparency_background(SDL_Surface* screen_surface)
 {    
     uint32_t grey_pixel  = 0xBFBFBFFF;
     uint32_t white_pixel = 0xFFFFFFFF;
+    uint32_t cell_size = 50;
 
     uint32_t width   = screen_surface->w;
     uint32_t height  = screen_surface->h;
     uint32_t* pixels = malloc(width * height * sizeof(uint32_t));
 
-    uint32_t cell_size = 25;
     bool start_with_white = true;
     for (uint32_t y = 0; y < height; ++y) {
         if (y % cell_size == 0) {
