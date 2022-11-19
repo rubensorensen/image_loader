@@ -1,4 +1,5 @@
 #include "image_loader.h"
+#include "window.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,9 +8,16 @@
 
 int
 main(void)
-{
-    Image img = read_image_from_file("test_images/test.tga");
-    write_image_to_ppm(img, "output.ppm");
+{    
+    Image img = read_image_from_file("test_images/football_seal.tga");
+    
+    if (!window_create(img.width, img.height)) {
+        exit(EXIT_FAILURE);
+    }
+    
+    while (window_update(img.pixels, img.width, img.height));
+    window_destroy();
+    free(img.pixels);
     
     return EXIT_SUCCESS;
 }

@@ -112,10 +112,9 @@ parse_tga_image(uint8_t* data)
     data = read_tga_header(data, &tga_header);
     print_tga_header(tga_header);
     
-    assert(tga_header.color_map_type == TGA_COLOR_MAP_TYPE_NO_COLOR_MAP &&
-           "Color maps are not supported");
     assert(((tga_header.image_type == TGA_IMAGE_TYPE_UNCOMPRESSED_TRUE_COLOR_IMAGE) ||
-            (tga_header.image_type == TGA_IMAGE_TYPE_RUN_LENGTH_ENCODED_TRUE_COLOR_IMAGE))
+            (tga_header.image_type == TGA_IMAGE_TYPE_RUN_LENGTH_ENCODED_TRUE_COLOR_IMAGE) ||
+            (tga_header.image_type == TGA_IMAGE_TYPE_UNCOMPRESSED_COLOR_MAPPED_IMAGE))
            && "Unsupported image type");
     
     image.file_format = FILEFORMAT_TGA;
@@ -127,94 +126,91 @@ parse_tga_image(uint8_t* data)
     (void)image_id;
 
     uint8_t* color_map_data = data;
-    assert(tga_header.color_map_specification.color_map_entry_size % 8 == 0 &&
+    assert(((tga_header.color_map_specification.color_map_entry_size % 8) == 0) &&
            "Color map entry size in bits must be divisible by 8");
-    data += tga_header.color_map_specification.color_map_length * (tga_header.color_map_specification.color_map_entry_size / 8);
-    (void)color_map_data;
+    uint32_t color_map_stride = tga_header.color_map_specification.color_map_entry_size / 8;
+    data += tga_header.color_map_specification.color_map_length * color_map_stride;
 
-    bool has_alpha = tga_header.image_specification.image_descriptor & 0xF;
-    uint32_t stride = has_alpha ? 4 : 3;
+    bool has_alpha = (tga_header.image_specification.image_descriptor & 0xF) > 2;
+    assert(((tga_header.image_specification.pixel_depth % 8) == 0) &&
+           (tga_header.image_specification.pixel_depth <= 32));
+    uint32_t stride = tga_header.image_specification.pixel_depth / 8;
     bool right_to_left = (tga_header.image_specification.image_descriptor >> 4) & 1;
     bool bottom_to_top = !((tga_header.image_specification.image_descriptor >> 5) & 1);
+
+    image.pixels = (uint32_t*)malloc(image.width * image.height * sizeof(uint32_t));
     
     switch (tga_header.image_type) {
         case TGA_IMAGE_TYPE_UNCOMPRESSED_TRUE_COLOR_IMAGE: {
-            uint32_t* orig_pixels = (uint32_t*)data;
-            image.pixels = (uint32_t*)malloc(image.width * image.height * sizeof(uint32_t));
-            
             for (uint32_t y = 0; y < image.height; ++y) {
                 for (uint32_t x = 0; x < image.width; ++x) {
-                    uint32_t i = x + y * image.width;
-                    uint8_t* pixel = (((uint8_t*)orig_pixels) + i*stride);
-                    uint32_t pixel_x = x;
-                    uint32_t pixel_y = y;
-                    if (right_to_left) {
-                        pixel_x = image.width - x;
-                    }
-                    if (bottom_to_top) {
-                        pixel_y = image.height -y;
-                    }
-                    
-                    int32_t pixel_index = pixel_x + pixel_y * image.width;
-                    image.pixels[pixel_index] = 0;
+                    uint8_t* pixel = data + stride*(x + y*image.width);
                     uint8_t b = pixel[0];
                     uint8_t g = pixel[1];
                     uint8_t r = pixel[2];
-                    image.pixels[pixel_index] = ((r << 24) | (g << 16) | (b << 8));
-                    if (has_alpha) {
-                        uint8_t a = pixel[3];
-                        image.pixels[pixel_index] |= a;
-                    } else {
-                        image.pixels[pixel_index] |= 0xFF;
-                    }
+                    uint8_t a = has_alpha ? pixel[3] : 0xFF;
+                    uint32_t ix = right_to_left ? image.width - x: x;
+                    uint32_t iy = bottom_to_top ? image.height - y - 1 : y;
+                    uint32_t i = ix + iy * image.width;
+                    image.pixels[i] = ((r << 24) | (g << 16) | (b << 8) | a);
+                }
+            }
+        } break;
+        case TGA_IMAGE_TYPE_UNCOMPRESSED_COLOR_MAPPED_IMAGE: {
+            for (uint32_t y = 0; y < image.height; ++y) {
+                for (uint32_t x = 0; x < image.width; ++x) {
+                    uint32_t pixel_index = *(data + stride*(x + y*image.width));
+                    uint32_t* pixel = (uint32_t*)(color_map_data + color_map_stride*pixel_index);
+                    uint8_t b = pixel[0];
+                    uint8_t g = pixel[1];
+                    uint8_t r = pixel[2];
+                    uint8_t a = has_alpha ? pixel[3] : 0xFF;
+                    uint32_t ix = right_to_left ? image.width - x: x;
+                    uint32_t iy = bottom_to_top ? image.height - y - 1 : y;
+                    uint32_t i = ix + iy * image.width;
+                    image.pixels[i] = ((r << 24) | (g << 16) | (b << 8) | a);
                 }
             }
         } break;
         case TGA_IMAGE_TYPE_RUN_LENGTH_ENCODED_TRUE_COLOR_IMAGE: {
-            image.pixels = (uint32_t*)malloc(image.width * image.height * sizeof(uint32_t));
-            
-            uint8_t* data_cursor = (uint8_t*)data;
-            
-            uint32_t pixel_index = 0;
-            while (pixel_index < image.width * image.height) {
-                uint8_t first_byte = *data_cursor++;
-                bool run_length_packet = first_byte >> 7;
-                uint8_t rep_count = (first_byte & 127) + 1;
 
-                if (run_length_packet) {
-                    uint32_t pixel = 0;
-                    uint8_t b = data_cursor[0];
-                    uint8_t g = data_cursor[1];
-                    uint8_t r = data_cursor[2];
-                    pixel = ((r << 24) | (g << 16) | (b << 8));
-                    if (has_alpha) {
-                        uint8_t a = data_cursor[3];
-                        pixel |= a;
-                    } else {
-                        pixel |= 0xFF;
+            for (uint32_t i = 0; i < image.width * image.height;) {
+                uint8_t b = *data++;
+                bool rlp = b >> 7;
+                uint8_t rep = (b & 127) + 1;
+                if (rlp) {
+                    uint8_t b = data[0];
+                    uint8_t g = data[1];
+                    uint8_t r = data[2];
+                    uint8_t a = has_alpha ? data[3] : 0xFF;
+                    for (uint32_t j = 0; j < rep; ++j) {
+                        uint32_t x = i % image.width;
+                        uint32_t y = i / image.width;
+                        uint32_t ix = right_to_left ? image.width - x : x;
+                        uint32_t iy = bottom_to_top ? image.height - y - 1: y;
+                        uint32_t index = ix + iy * image.width;
+                        image.pixels[index] = ((r << 24) | (g << 16) | (b << 8) | a);
+                        i += 1;
                     }
-                    for (uint8_t i = 0; i < rep_count; ++i) {
-                        image.pixels[pixel_index++] = pixel;
-                    }
-                    data_cursor += stride;
-                } else {
-                    for (uint8_t i = 0; i < rep_count; ++i) {
-                        uint8_t* pixel = data_cursor + i*stride;
-                        uint8_t b = pixel[0];
-                        uint8_t g = pixel[1];
-                        uint8_t r = pixel[2];
-                        image.pixels[pixel_index] = ((r << 24) | (g << 16) | (b << 8));
-                        if (has_alpha) {
-                            uint8_t a = pixel[3];
-                            image.pixels[pixel_index] |= a;
-                        } else {
-                            image.pixels[pixel_index] |= 0xFF;
-                        }
-                        pixel_index += 1;
-                    }
-                    data_cursor += stride * (rep_count);
+                    data += stride;
+                    continue;
+                }
+                for (uint32_t j = 0; j < rep; ++j) {
+                    uint8_t b = data[0];
+                    uint8_t g = data[1];
+                    uint8_t r = data[2];
+                    uint8_t a = has_alpha ? data[3] : 0xFF;
+                    uint32_t x = i % image.width;
+                    uint32_t y = i / image.width;
+                    uint32_t ix = right_to_left ? image.width - x : x;
+                    uint32_t iy = bottom_to_top ? image.height - y - 1: y;
+                    uint32_t index = ix + iy * image.width;
+                    image.pixels[index] = ((r << 24) | (g << 16) | (b << 8) | a);
+                    i += 1;
+                    data += stride;
                 }
             }
+            
         } break;
         default: {
             image.width = 0;
