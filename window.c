@@ -4,6 +4,12 @@
 
 static SDL_Window* g_window;
 
+static float zoom = 1.0f;
+static int32_t x_offset;
+static int32_t y_offset;
+
+static bool lmb_down;
+
 static bool
 sdl_init(void)
 {
@@ -41,26 +47,27 @@ draw_image(SDL_Surface* screen_surface, uint32_t* pixels,
         SDL_CreateRGBSurfaceFrom(pixels,
                                  width, height, 32, 4 * width,
                                  0xFF << 24, 0xFF << 16, 0xFF << 8, 0xFF << 0);
-    uint32_t screen_width = screen_surface->clip_rect.w;
-    uint32_t screen_height = screen_surface->clip_rect.h;
-    int32_t margin_x = ((int32_t)screen_width - (int32_t)width) / 2;
-    int32_t margin_y = ((int32_t)screen_height - (int32_t)height) / 2;
+    
+    uint32_t center_x = screen_surface->clip_rect.w / 2;
+    uint32_t center_y = screen_surface->clip_rect.h / 2;
+    int32_t x = center_x - (width / 2) * zoom;
+    int32_t y = center_y - (height / 2) * zoom;
 
     SDL_Rect rect = {
-        .x = margin_x, .y = margin_y,
-        .w = screen_width, .h = screen_height
+        .x = x + + x_offset, .y = y + y_offset,
+        .w = width * zoom, .h = height * zoom
     };
-    
-    SDL_BlitSurface(img_surface, &img_surface->clip_rect,
-                    screen_surface, &rect);
+
+    SDL_BlitScaled(img_surface, &img_surface->clip_rect,
+                   screen_surface, &rect);
 }
 
 static void
 draw_transparency_background(SDL_Surface* screen_surface)
 {    
-    uint32_t grey_pixel  = 0xBFBFBFFF;
-    uint32_t white_pixel = 0xFFFFFFFF;
-    uint32_t cell_size = 50;
+    uint32_t grey_pixel  = 0x9b9b99FF;
+    uint32_t white_pixel = 0xbdbcbaFF;
+    uint32_t cell_size = 10;
 
     uint32_t width   = screen_surface->w;
     uint32_t height  = screen_surface->h;
@@ -101,23 +108,28 @@ window_update(uint32_t* pixels, uint32_t width, uint32_t height)
             case SDL_QUIT: {
                 return false;
             } break;
-            /* case SDL_WINDOWEVENT: { */
-                /* switch (e.window.event) { */
-                    /* case SDL_WINDOWEVENT_RESIZED: { */
-                    /*     uint32_t resized_w = e.window.data1; */
-                    /*     uint32_t resized_h = e.window.data2; */
-                    /*     if ((uint32_t)screen_surface->w != resized_w) { */
-                    /*         float aspect_ratio = height / (float)width; */
-                    /*         resized_h = resized_w * aspect_ratio; */
-                    /*     } else if ((uint32_t)screen_surface->h != resized_h) { */
-                    /*         float aspect_ratio = width / (float)height; */
-                    /*         resized_w = resized_h * aspect_ratio; */
-                    /*     } */
-                    /*     SDL_SetWindowSize(g_window, resized_w, resized_h); */
-                    /*     screen_surface = SDL_GetWindowSurface(g_window); */
-                    /* } break; */
-                /* } */
-            /* } break; */
+            case SDL_MOUSEBUTTONDOWN: {
+                if (e.button.button == SDL_BUTTON_LEFT) {
+                    lmb_down = true;
+                }
+            } break;
+            case SDL_MOUSEBUTTONUP: {
+                if (e.button.button == SDL_BUTTON_LEFT) {
+                    lmb_down = false;
+                }
+            } break;
+            case SDL_MOUSEMOTION: {
+                if (lmb_down) {
+                    x_offset += e.motion.xrel;
+                    y_offset += e.motion.yrel;
+                }
+            } break;
+            case SDL_MOUSEWHEEL: {
+                zoom += e.wheel.y * 0.1f;
+                if (zoom < 0.05f) {
+                    zoom = 0.05f;
+                }
+            } break;
         }
     }
 
