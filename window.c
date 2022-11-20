@@ -41,8 +41,18 @@ draw_image(SDL_Surface* screen_surface, uint32_t* pixels,
         SDL_CreateRGBSurfaceFrom(pixels,
                                  width, height, 32, 4 * width,
                                  0xFF << 24, 0xFF << 16, 0xFF << 8, 0xFF << 0);
-    SDL_BlitScaled(img_surface, &img_surface->clip_rect,
-                    screen_surface, &screen_surface->clip_rect);
+    uint32_t screen_width = screen_surface->clip_rect.w;
+    uint32_t screen_height = screen_surface->clip_rect.h;
+    int32_t margin_x = ((int32_t)screen_width - (int32_t)width) / 2;
+    int32_t margin_y = ((int32_t)screen_height - (int32_t)height) / 2;
+
+    SDL_Rect rect = {
+        .x = margin_x, .y = margin_y,
+        .w = screen_width, .h = screen_height
+    };
+    
+    SDL_BlitSurface(img_surface, &img_surface->clip_rect,
+                    screen_surface, &rect);
 }
 
 static void
@@ -85,27 +95,33 @@ draw_transparency_background(SDL_Surface* screen_surface)
 bool
 window_update(uint32_t* pixels, uint32_t width, uint32_t height)
 {
-    SDL_Surface* screen_surface = SDL_GetWindowSurface(g_window);
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
             case SDL_QUIT: {
                 return false;
             } break;
-            case SDL_WINDOWEVENT: {
-                switch (e.window.event) {
-                    case SDL_WINDOWEVENT_RESIZED: {
-                        float aspect_ratio = width / (float)height;
-                        uint32_t h = screen_surface->h;
-                        uint32_t w = h * aspect_ratio;
-                        SDL_SetWindowSize(g_window, w, h);
-                        screen_surface = SDL_GetWindowSurface(g_window);
-                    } break;
-                }
-            } break;
+            /* case SDL_WINDOWEVENT: { */
+                /* switch (e.window.event) { */
+                    /* case SDL_WINDOWEVENT_RESIZED: { */
+                    /*     uint32_t resized_w = e.window.data1; */
+                    /*     uint32_t resized_h = e.window.data2; */
+                    /*     if ((uint32_t)screen_surface->w != resized_w) { */
+                    /*         float aspect_ratio = height / (float)width; */
+                    /*         resized_h = resized_w * aspect_ratio; */
+                    /*     } else if ((uint32_t)screen_surface->h != resized_h) { */
+                    /*         float aspect_ratio = width / (float)height; */
+                    /*         resized_w = resized_h * aspect_ratio; */
+                    /*     } */
+                    /*     SDL_SetWindowSize(g_window, resized_w, resized_h); */
+                    /*     screen_surface = SDL_GetWindowSurface(g_window); */
+                    /* } break; */
+                /* } */
+            /* } break; */
         }
     }
- 
+
+    SDL_Surface* screen_surface = SDL_GetWindowSurface(g_window); 
     draw_transparency_background(screen_surface);
     draw_image(screen_surface, pixels, width, height);
     SDL_UpdateWindowSurface(g_window);
