@@ -26,6 +26,14 @@ window_create(uint32_t width, uint32_t height)
     if (!sdl_init()) {
         return false;
     }
+
+    float max_size_rel_to_screen = 0.75f;
+    SDL_DisplayMode dm;
+    SDL_GetCurrentDisplayMode(0, &dm);
+    uint32_t max_width = dm.w * max_size_rel_to_screen;
+    uint32_t max_height = dm.h * max_size_rel_to_screen;
+    if (width > max_width) width = max_width;
+    if (height > max_height) height = max_height;;
     
     g_window = SDL_CreateWindow("Image Loader",
                                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -54,7 +62,7 @@ draw_image(SDL_Surface* screen_surface, uint32_t* pixels,
     int32_t y = center_y - (height / 2) * zoom;
 
     SDL_Rect rect = {
-        .x = x + + x_offset, .y = y + y_offset,
+        .x = x + x_offset, .y = y + y_offset,
         .w = width * zoom, .h = height * zoom
     };
 
